@@ -1,0 +1,131 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+
+<h1>Grocery List Manager</h1>
+
+<div>
+    <hr />
+    <form id="addGroceryForm" class="form">
+        <h4>Add new Grocery Item</h4>
+        <div class="form-group">
+            <label for="title">Grocery Item</label>
+            <input type="text" class="form-control" id="item" placeholder="Grocery Item" />
+        </div>
+        <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input type="text" class="form-control" id="quantity" placeholder="Quantity" />
+        </div>
+        <button type="submit" id="submitButton" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+
+<h4>Grocery Items List</h4>
+<table class="table">
+    <thead class="thead-dark"><tr><th>Item</th><th>Quantity</th><th></th><th></th></tr></thead>
+    <tbody id="groceryTable"></tbody>
+</table>
+
+@section Scripts {
+    <script>// WHEN DOCUMENT READY
+        $(function() {
+            loadData();
+        });
+
+        $("#addGroceryForm").on('click', '#submitButton' , function() {
+            addItem();
+        });
+        
+        function addItem() {
+            var requestData = {
+                ItemName: $("#item").val(), // GET THE TITLE VALUE
+                Quantity: $("#quantity").val(), // GET THE AUTHOR VALUE
+                Purchased : false
+            };
+            $.ajax({
+                url: '/api/Items',
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'POST',
+                data: JSON.stringify(requestData)
+            }).done(function(responseData, status, xhr) {
+                loadData(); // RELOAD THE BOOK DATA
+                $("#item").val(""); //CLEAR TITLE
+                $("#quantity").val(""); //CLEAR AUTHOR
+                loadData();
+            }).fail(function(xhr, status, error) {
+                alert("There was an error saving your book");
+            });
+        }
+
+        function loadData() {
+            $.ajax({
+                url: "/api/Items",
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'GET'
+            }).done(function(responseJSON,status,xhr) {
+                populateGroceryList(responseJSON);
+            }).fail(function(xhr,status,error) {
+                alert("There was an error retrieving the data");
+            });
+        }
+        
+        $("#groceryTable").on('click', 'button.item-remove', function() {
+            var id = $(this).parents("tr").attr('item-id');
+            if (confirm("Are you sure you want to Remove this Item?")) {
+                removeItem(id);
+            }
+            return false;
+        });
+                        
+        function removeItem(id) {
+            $.ajax({
+                url: '/api/Items/' + id,
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'DELETE'
+            }).done(function(responseData, status, xhr) {
+               loadData();
+            }).fail(function(xhr, status, error) {
+                alert("There was an error deleting your book");
+            });
+        }
+
+        $("#groceryTable").on('click', 'button.item-purchase', function() {
+            var id = $(this).parents("tr").attr('item-id');
+            if (confirm("Mark this item as purchased?")) {
+                purchaseItem(id);
+            }
+            return false;
+        });
+
+            function purchaseItem(id) {
+             $.ajax({
+                url: "/api/items/purchased/"+ id,
+                dataType: 'json',
+                contentType: 'application/json',
+                method: 'PUT'
+             }).done(function (responseJSON, status, xhr) {
+                 loadData();
+            }).fail(function(xhr,status,error) {
+                alert("There was an error retrieving the data");
+            });
+
+            }
+
+        function populateGroceryList(Items) {
+            $("#groceryTable").empty();
+            $.each(Items, function (index, item) {
+                if (item.purchased) {
+                    $("#groceryTable").append('<tr item-id="' + item.id + '"><td><s>' + item.itemName + '</s></td><td><s>' + item.quantity + '</s></td><td></td><td><button type="button" class="btn btn-danger item-remove">Remove</button></td></tr>');
+                } else {
+                    $("#groceryTable").append('<tr item-id="' + item.id + '"><td>' + item.itemName + '</td><td>' + item.quantity + '</td><td><button type="button" class="btn btn-primary item-purchase">Purchased</button></td><td><button type="button" class="btn btn-danger item-remove">Remove</button></td></tr>');
+                }
+            })
+        };
+        </script>
+}
